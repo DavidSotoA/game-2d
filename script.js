@@ -16,15 +16,44 @@
         }
     }
 
+    let Collisions = {
+
+        collisionResolution : {
+            stop: function() {
+            }
+        }
+    }
+
     var entityTypes = {
         player: 'player',
         ball: 'ball',
         wall: 'wall',
-        enemy: 'enemy'
+        enemy: 'enemy',
+        powerUp: 'powerUp'
     }
 
     var poweUps = {
-        increment: 'increment'
+        increment: {
+            type: 'hiden',
+            crashBox: (fatherBox, game) => {
+                let height = 20,
+                    width = 20;
+
+                let x = (fatherBox.position.x + (fatherBox.width/2)) - width/2,
+                    y = (fatherBox.position.y + (fatherBox.height/2)) - height/2
+
+                let powerUp = new Box(x, y, height, width, "cyan", false,  entityTypes.powerUp, new Vector(0, 4));
+                powerUp.addPowerUp(this.poweUps.increment);
+                game.addObject(powerUp);
+            },
+
+            getPowerUp: (obj) => {
+                let extraWidth = 10;
+
+                obj.position.x -= (extraWidth/2) 
+                obj.width += extraWidth;
+            }
+        }
     }
 
     function main(){
@@ -51,7 +80,7 @@
                 columns = 8;
             
             let obstaculos = 5;
-                poweUps = 5;
+                // poweUps = 5;
             
             for (let j=0; j<rows; j++ ) {
                 let y = 80 +(41*j)
@@ -61,7 +90,12 @@
                     let type = fortune <= obstaculos ? entityTypes.wall : entityTypes.enemy;
                         color = fortune <= obstaculos ? "gray" : colors[(i+j)%3];
 
+                     if(fortune <= obstaculos) {
+                         obstaculos -= 1;
+                     }
+
                     let block = new Box(90 + (91*i), y, 90, 40, color, false, type, new Vector(0,0));
+                    block.addPowerUp(poweUps.increment);
                     game.addObject(block)
                 }
             }
@@ -175,6 +209,11 @@
         this.getOthers = (object) => {
             return this.objects.filter(obj => obj.id != object.id);
         }
+
+        this.getObject = (id) => {
+            return this.objects.filter(obj => obj.id == id)[0];
+        }
+
     }
 
     function Point(x, y) {
@@ -225,21 +264,25 @@
         let collision = {
             top:    {
                 collision : false,
+                id: null,
                 deep: 0,
                 type: ''
             },
             rigth:  {
                 collision : false,
+                id: null,
                 deep: 0,
                 type: ''
             },
             bottom: {
                 collision : false,
+                id: null,
                 deep: 0,
                 type: ''
             },
             left:   {
                 collision : false,
+                id: null,
                 deep: 0,
                 type: ''
             }
@@ -261,25 +304,34 @@
         let collide = !((bottom1 < top2) || (top1 > bottom2) || (rigth1 < left2) || (left1 > rigth2));
 
         if (collide) {
-            // console.log('collision')
+
+            obj1.collide.isCollision = true;
+            obj1.collide.type = b.type;
+
             if (current_rigth1 <= current_left2 && rigth1 >= left2) {
                 collision.rigth.collision = true;
                 collision.rigth.deep = -Math.abs(rigth1 - left2);
                 collision.rigth.type = b.type;
+                collision.rigth.id = b.id;
             } else if (current_left1 >= current_rigth2 && left1 <= rigth2) {
                 collision.left.collision = true;
                 collision.left.deep = Math.abs(left1 - rigth2);
                 collision.left.type = b.type;
+                collision.left.id = b.id;
             } else if (current_top1 >= current_bottom2 && top1 <= bottom2) {
                 collision.top.collision = true;
                 collision.top.deep = Math.abs(top1 - bottom2);
                 collision.top.type = b.type;
+                collision.top.id = b.id;
             } else if(current_bottom1 <= current_top2 && bottom1 >= top2) {
                 collision.bottom.collision = true;
                 collision.bottom.deep = -Math.abs(bottom1 - top2);
                 collision.bottom.type = b.type;
+                collision.bottom.id = b.id;
             }
-        }
+        
+        } 
+
 
         return collision;
 
@@ -289,21 +341,25 @@
         var collitions = {
             top:    {
                 collision : false,
+                id: null,
                 deep: 0,
                 type: ''
             },
             rigth:  {
                 collision : false,
+                id: null,
                 deep: 0,
                 type: ''
             },
             bottom: {
                 collision : false,
+                id: null,
                 deep: 0,
                 type: ''
             },
             left:   {
                 collision : false,
+                id: null,
                 deep: 0,
                 type: ''
             }
@@ -319,6 +375,7 @@
             collitions.left     = currentCollitions.left.collision     ? (currentCollitions.left)   : collitions.left;
         })
 
+
         return collitions;
     }
 
@@ -331,25 +388,33 @@
         this.mass       = 1;
         this.forces     = [];
         this.type       = type;
-        this.collide    = false;
+        this.powerUps    = [];
+        this.collide    = {
+            isCollision: false,
+            type: '',
+        };
         this.collisions = {
             top:    {
                 collision : false,
+                id: null,
                 deep: 0,
                 type: ''
             },
             rigth:  {
                 collision : false,
+                id: null,
                 deep: 0,
                 type: ''
             },
             bottom: {
                 collision : false,
+                id: null,
                 deep: 0,
                 type: ''
             },
             left:   {
                 collision : false,
+                id: null,
                 deep: 0,
                 type: ''
             }
@@ -378,10 +443,11 @@
 
                 this.speed.x    += xAceleration;
                 this.speed.y    += yAceleration;
+
                     
                 if (this.collisions.top.collision) {
 
-                    //choque de jugador con muro
+                    // choque de jugador con muro
                     if(this.collisions.top.type === entityTypes.wall && this.type == entityTypes.player) { 
                         this.position.y += this.collisions.top.deep;
                         this.speed.y    = 0
@@ -400,7 +466,10 @@
                     }
 
                     //choque de enemigo con bola
-                    if(this.collisions.top.type === entityTypes.ball && this.type == entityTypes.enemy) { 
+                    if(this.collisions.top.type === entityTypes.ball && this.type == entityTypes.enemy) {
+                        this.powerUps.forEach( powerUp => {
+                            powerUp.crashBox(this, game)
+                        })
                         game.removeObject(this)
                      }
 
@@ -412,6 +481,17 @@
 
                     //choque de jugador con bola
                     if(this.collisions.top.type === entityTypes.ball && this.type == entityTypes.player) { 
+                    }
+
+                    //choque jugador con powerUp
+                    if(this.collisions.top.type === entityTypes.powerUp && this.type == entityTypes.player) { 
+                        let powerUp = game.getObject(this.collisions.top.id).powerUps[0];
+                        powerUp.getPowerUp(this);
+                    }
+
+                    //choque powerUp con jugador
+                    if(this.collisions.top.type === entityTypes.player && this.type == entityTypes.powerUp) { 
+                        game.removeObject(this);
                     }
 
 
@@ -439,6 +519,9 @@
 
                     //choque de enemigo con bola
                     if(this.collisions.rigth.type === entityTypes.ball && this.type == entityTypes.enemy) { 
+                        this.powerUps.forEach( powerUp => {
+                            powerUp.crashBox(this, game)
+                        })
                         game.removeObject(this)
                     }
 
@@ -450,6 +533,18 @@
 
                     //choque de jugador con bola
                     if(this.collisions.rigth.type === entityTypes.ball && this.type == entityTypes.player) { 
+                    }
+
+                    //choque jugador con powerUp
+                    if(this.collisions.rigth.type === entityTypes.powerUp && this.type == entityTypes.player) { 
+                        let powerUp = game.getObject(this.collisions.rigth.id).powerUps[0];
+                        powerUp.getPowerUp(this);
+                    }
+
+
+                    //choque powerUp con jugador
+                    if(this.collisions.rigth.type === entityTypes.player && this.type == entityTypes.powerUp) { 
+                        game.removeObject(this);
                     }
                 }
 
@@ -475,6 +570,9 @@
 
                     //choque de enemigo con bola
                     if(this.collisions.bottom.type === entityTypes.ball && this.type == entityTypes.enemy) {
+                        this.powerUps.forEach( powerUp => {
+                            powerUp.crashBox(this, game)
+                        })
                         game.removeObject(this)
                     }
 
@@ -489,9 +587,17 @@
                     if(this.collisions.bottom.type === entityTypes.ball && this.type == entityTypes.player) { 
                     }
 
+                    //choque jugador con powerUp
+                    if(this.collisions.bottom.type === entityTypes.powerUp && this.type == entityTypes.player) { 
+                        let powerUp = game.getObject(this.collisions.bottom.id).powerUps[0];
+                        powerUp.getPowerUp(this);
+                    }
 
 
-                    
+                    //choque powerUp con jugador
+                    if(this.collisions.bottom.type === entityTypes.player && this.type == entityTypes.powerUp) { 
+                        game.removeObject(this);
+                    }
                 }
 
                 if (this.collisions.left.collision) {
@@ -516,6 +622,9 @@
 
                     //choque de enemigo con bola
                     if(this.collisions.left.type === entityTypes.ball && this.type == entityTypes.enemy) { 
+                        this.powerUps.forEach( powerUp => {
+                            powerUp.crashBox(this, game)
+                        })
                         game.removeObject(this)
                     }
 
@@ -528,6 +637,17 @@
                     //choque de jugador con bola
                     if(this.collisions.left.type === entityTypes.ball && this.type == entityTypes.player) { 
                     }
+
+                    //choque jugador con powerUp
+                    if(this.collisions.left.type === entityTypes.powerUp && this.type == entityTypes.player) { 
+                        let powerUp = game.getObject(this.collisions.left.id).powerUps[0];
+                        powerUp.getPowerUp(this);
+                    }
+
+                    //choque powerUp con jugador
+                    if(this.collisions.left.type === entityTypes.player && this.type == entityTypes.powerUp) { 
+                        game.removeObject(this);
+                    }
                 }
 
 
@@ -539,6 +659,10 @@
 
         this.addForce = (force) => {
             this.forces.push(force);
+        }
+
+        this.addPowerUp = (powerUp) => {
+            this.powerUps.push(powerUp);
         }
 
         this.getAceleration = () => {
@@ -557,9 +681,13 @@
             }
         }
 
-        this.make = function() {
+        this.make = () => {
             ctx.fillStyle = color;
             ctx.fillRect(this.position.x, this.position.y, this.width, this.height);
+        }
+
+        this.getCenter = () => {
+            return new Point(this.x + this.width/2, this.y + this.height/2);
         }
 
     }
