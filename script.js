@@ -2,31 +2,83 @@
     var ctx;
     var id = 0;
     var keys = []
-    const LINEAL_SPEED = 2;
+    const LINEAL_SPEED = 9;
+    var game = new Game();
+
+    var Forces = {
+        gravity: {
+            id: 'gravity',
+            time: 0,
+            lambda: (obj) => {
+                let force = new Vector(0, 0.2);
+                return force;
+            }
+        }
+    }
+
+    var entityTypes = {
+        player: 'player',
+        ball: 'ball',
+        wall: 'wall',
+        enemy: 'enemy'
+    }
+
+    var poweUps = {
+        increment: 'increment'
+    }
 
     function main(){
-        var game = new Game();
         var gravity = new Vector(0, 0.2);
 
-        var player  = new Box(100, 100, 30, 30, "blue", false, true),
-            floor1  = new Box(300, 270, 800, 70, "gray", true, true);
-            floor2  = new Box(0, 470, 900, 30, "gray", true, true);
+        var player  = new Box(410, 450, 80, 20, "blue", false,      entityTypes.player, new Vector(0,0)),
+            ball  =   new Box(300, 300, 30, 30, "blue", false,      entityTypes.ball, new Vector(4,4)),
 
-        game.addObject(player)
-            .addObject(floor1)
-            .addObject(floor2)
+            left    = new Box(0, 0, 30, 500, "gray", true,          entityTypes.wall, new Vector(0,0)),
+            bottom  = new Box(0, 470, 900, 30, "gray", true,        entityTypes.wall, new Vector(0,0)),
+            rigth   = new Box(870, 0, 30, 500, "gray", true,        entityTypes.wall, new Vector(0,0)),
+            top     = new Box(0, 0, 900, 30, "gray", true,          entityTypes.wall, new Vector(0,0));
 
-        game.start(900, 500, gravity);
+            game.addObject(player)
+                .addObject(ball)
+                .addObject(left)
+                .addObject(bottom)
+                .addObject(rigth)
+                .addObject(top)
+
+            let blocks = []
+            let colors = ['red', 'blue', 'green']
+            let rows = 4,
+                columns = 8;
+            
+            let obstaculos = 5;
+                poweUps = 5;
+            
+            for (let j=0; j<rows; j++ ) {
+                let y = 80 +(41*j)
+                for (let i=0; i<columns; i++ ) {
+                    let fortune = Math.floor((Math.random() * rows*columns) + 1);
+
+                    let type = fortune <= obstaculos ? entityTypes.wall : entityTypes.enemy;
+                        color = fortune <= obstaculos ? "gray" : colors[(i+j)%3];
+
+                    let block = new Box(90 + (91*i), y, 90, 40, color, false, type, new Vector(0,0));
+                    game.addObject(block)
+                }
+            }
+
+        game.start(900, 500, Forces.gravity, false);
     }
 
     function Game() {
         this.canvas = document.createElement("canvas");
         this.objects = [];
         this.physics = {};
+        this.manualMotion = false;
 
-        this.start = ( width, height, gravity) => {
+        this.start = ( width, height, gravity, manualMotion) => {
             this.canvas.width   = width;
             this.canvas.height  = height;
+            this.manualMotion = manualMotion;
 
             this.physics = {
                 gravity : gravity 
@@ -34,12 +86,21 @@
 
             ctx = this.canvas.getContext("2d");
             document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+
+            this.applyGravity([this.objects[0]]);
             this.handleKeys();
             this.loop();
         };
 
-        this.handleKeys = () =>{
-            window.addEventListener('keydown', function (e) {
+        this.applyGravity = (objects) => {
+            objects.forEach( obj => obj.addForce(this.physics.gravity));
+        }
+
+        this.handleKeys = () => {
+            window.addEventListener('keydown',  (e) => {
+                if (e.keyCode == 81 && this.manualMotion) {
+                    this.loop();
+                }
                 keys = (keys || []);
                 keys[e.keyCode] = (e.type == "keydown");
             })
@@ -60,6 +121,7 @@
                 
                 //handle key events
                 if (keys) {
+
                     if (keys[37]) {
                         player.speed.x = -LINEAL_SPEED;
                     }
@@ -72,30 +134,42 @@
                         player.speed.x = 0;
                     }
 
-                    if(keys[38]) {
-                        player.speed.y = -LINEAL_SPEED;
+                    if(keys[38] && player.collisions.bottom.collision) {
+                        player.speed.y = -5;
                     }
 
                     if(keys[40]) {
-                        player.speed.y = LINEAL_SPEED;
+                        player.speed.y = 5;
                     }
 
                 }
 
-                this.objects.forEach( obj => {
+                let collisionObjects = this.getCollisionObjects();
+
+                collisionObjects.forEach( obj => {
                     obj.collisions = objectWorldCollition(obj, this.getOthers(obj)) ;
+                });
+
+                this.objects.forEach( obj => {
                     obj.update();
                     obj.make();
                 });
             }
 
-            setInterval(this.updateGame, 20);
+            this.manualMotion ? this.updateGame() : setInterval(this.updateGame, 20);
         }
 
         this.addObject = function(object) {
-            object.addForce(this.physics.gravity);
             this.objects.push(object);
             return this;
+        }
+
+        this.removeObject = (object) => {
+            this.objects = this.objects.filter(obj => obj.id != object.id)
+        }
+
+        this.getCollisionObjects  = () => {
+            return this.objects.filter( obj => obj.type != entityTypes.wall);
         }
 
         this.getOthers = (object) => {
@@ -138,50 +212,72 @@
             current_bottom2 = b.position.y + b.height,
             current_left2   = b.position.x;
 
-        let top1    = a.position.y + a.speed.y,
-            rigth1  = a.position.x + a.width + a.speed.x,
-            bottom1 = a.position.y + a.height + a.speed.y,
-            left1   = a.position.x + a.speed.x;
+        let top1    = a.position.y + (a.speed.y ),
+            rigth1  = a.position.x + a.width + (a.speed.x ),
+            bottom1 = a.position.y + a.height + (a.speed.y ),
+            left1   = a.position.x + (a.speed.x );
 
-        let top2    = b.position.y + b.speed.y,
-            rigth2  = b.position.x + b.width + b.speed.x,
-            bottom2 = b.position.y + b.height + b.speed.y,
-            left2   = b.position.x + b.speed.x;
+        let top2    = b.position.y + (b.speed.y ),
+            rigth2  = b.position.x + b.width + (b.speed.x ),
+            bottom2 = b.position.y + b.height + (b.speed.y ),
+            left2   = b.position.x + (b.speed.x );
 
         let collision = {
             top:    {
                 collision : false,
-                deep: 0
+                deep: 0,
+                type: ''
             },
             rigth:  {
                 collision : false,
-                deep: 0
+                deep: 0,
+                type: ''
             },
             bottom: {
                 collision : false,
-                deep: 0
+                deep: 0,
+                type: ''
             },
             left:   {
                 collision : false,
-                deep: 0
+                deep: 0,
+                type: ''
             }
         }
+
+        // console.log('--------------------------------------------------');
+        // console.log('Player:')
+        // console.log('position:' +       JSON.stringify(new Vector(a.position.x , a.position.y + a.height)))
+        // console.log('speed:' +          JSON.stringify(a.speed));
+        // console.log('aceleration:' +    JSON.stringify(a.getAceleration()));
+        // console.log('\n')
+        // console.log('obstaculo:')
+        // console.log('position:' +       JSON.stringify(b.position));
+        // console.log('speed:' +          JSON.stringify(b.speed));
+        // console.log('aceleration:' +    JSON.stringify(b.getAceleration()));
+
+        // console.log('--------------------------------------------------');
 
         let collide = !((bottom1 < top2) || (top1 > bottom2) || (rigth1 < left2) || (left1 > rigth2));
 
         if (collide) {
-            if (current_rigth1 <= current_left2 && rigth1 > left2) {
+            // console.log('collision')
+            if (current_rigth1 <= current_left2 && rigth1 >= left2) {
                 collision.rigth.collision = true;
                 collision.rigth.deep = -Math.abs(rigth1 - left2);
-            } else if (current_left1 >= current_rigth2 && left1 < rigth2) {
+                collision.rigth.type = b.type;
+            } else if (current_left1 >= current_rigth2 && left1 <= rigth2) {
                 collision.left.collision = true;
                 collision.left.deep = Math.abs(left1 - rigth2);
-            } else if (current_top1 >= current_bottom2 && top1 < bottom2) {
+                collision.left.type = b.type;
+            } else if (current_top1 >= current_bottom2 && top1 <= bottom2) {
                 collision.top.collision = true;
                 collision.top.deep = Math.abs(top1 - bottom2);
-            } else if(current_bottom1 <= current_top2 && bottom1 > top2) {
+                collision.top.type = b.type;
+            } else if(current_bottom1 <= current_top2 && bottom1 >= top2) {
                 collision.bottom.collision = true;
                 collision.bottom.deep = -Math.abs(bottom1 - top2);
+                collision.bottom.type = b.type;
             }
         }
 
@@ -193,19 +289,23 @@
         var collitions = {
             top:    {
                 collision : false,
-                deep: 0
+                deep: 0,
+                type: ''
             },
             rigth:  {
                 collision : false,
-                deep: 0
+                deep: 0,
+                type: ''
             },
             bottom: {
                 collision : false,
-                deep: 0
+                deep: 0,
+                type: ''
             },
             left:   {
                 collision : false,
-                deep: 0
+                deep: 0,
+                type: ''
             }
         }
 
@@ -222,86 +322,218 @@
         return collitions;
     }
 
-    var Forces = {
 
-        gravity: {
-            id: 'gravity',
-            time: 0,
-            lambda: (obj) => {
-                let force = new Vector(0, 0.2);
-                return force;
-            }
-        },
-
-        collision: {
-            id: 'collision',
-            time: 0,
-            lambda: (obj) => {
-                let force = new Vector(0, -0.2);
-                obj.forces.filter(force => force.id != 'collision')
-                return force;
-            }
-        }
-
-
-    }
-
-
-    function Box(x, y, width, height, color, fixed, collide) {
-        this.id = id;
-        id += 1 ;
+    function Box(x, y, width, height, color, fixed, type, initialSpeed) {
+        this.id         = id;
+        id              += 1 ;
         this.position   = new Point(x,y);
         this.fixed      = fixed;
-        this.collide    = collide;
-        this.mass = 1;
-        this.forces = [];
-        this.stop = false;
+        this.mass       = 1;
+        this.forces     = [];
+        this.type       = type;
+        this.collide    = false;
         this.collisions = {
             top:    {
                 collision : false,
-                deep: 0
+                deep: 0,
+                type: ''
             },
             rigth:  {
                 collision : false,
-                deep: 0
+                deep: 0,
+                type: ''
             },
             bottom: {
                 collision : false,
-                deep: 0
+                deep: 0,
+                type: ''
             },
             left:   {
                 collision : false,
-                deep: 0
+                deep: 0,
+                type: ''
             }
         };
 
         this.width      = width;
         this.height     = height;
-        this.speed      = new Vector(0, 0);
+        this.speed      = initialSpeed;
 
         this.update = () => {
 
                 if (this.collisions.top.collision || this.collisions.rigth.collision || this.collisions.bottom.collision || this.collisions.left.collision) {
-                    console.log(this.id);
-                    console.log(this.collisions);
+                    // console.log(this.type)
+                    // console.log(this.collisions);
+                    
+                }
+            if (!this.fixed)  {
+
+    
+                let aceleration = this.getAceleration();
+                    xAceleration = aceleration.xAceleration,
+                    yAceleration = aceleration.yAceleration;
+
+                this.position.x += this.speed.x;
+                this.position.y += this.speed.y;
+
+                this.speed.x    += xAceleration;
+                this.speed.y    += yAceleration;
+                    
+                if (this.collisions.top.collision) {
+
+                    //choque de jugador con muro
+                    if(this.collisions.top.type === entityTypes.wall && this.type == entityTypes.player) { 
+                        this.position.y += this.collisions.top.deep;
+                        this.speed.y    = 0
+                    }
+
+                    //choque de bola con muro
+                    if(this.collisions.top.type === entityTypes.wall && this.type == entityTypes.ball) { 
+                        this.position.y += this.collisions.top.deep;
+                        this.speed.y    = -this.speed.y
+                    }
+
+                    //choque de bola con enemgo
+                    if(this.collisions.top.type === entityTypes.enemy && this.type == entityTypes.ball) { 
+                        this.position.y += this.collisions.top.deep;
+                        this.speed.y    = -this.speed.y
+                    }
+
+                    //choque de enemigo con bola
+                    if(this.collisions.top.type === entityTypes.ball && this.type == entityTypes.enemy) { 
+                        game.removeObject(this)
+                     }
+
+                    //choque de bola con jugador
+                    if(this.collisions.top.type === entityTypes.player && this.type == entityTypes.ball) { 
+                        this.position.y += this.collisions.top.deep;
+                        this.speed.y    = -this.speed.y;
+                    }
+
+                    //choque de jugador con bola
+                    if(this.collisions.top.type === entityTypes.ball && this.type == entityTypes.player) { 
+                    }
+
+
                 }
 
-            let aceleration = this.getAceleration();
-                xAceleration = aceleration.xAceleration,
-                yAceleration = aceleration.yAceleration;
+                if (this.collisions.rigth.collision) {
 
-            if (!this.fixed && !this.stop)  {
-                this.position.x += this.speed.x + this.collisions.left.deep + this.collisions.rigth.deep;
-                this.position.y += this.speed.y + this.collisions.bottom.deep + this.collisions.top.deep;
+                    //choque de jugador con muro
+                    if(this.collisions.rigth.type === entityTypes.wall && this.type == entityTypes.player) { 
+                        this.position.x += this.collisions.rigth.deep;
+                        this.speed.x    = 0; 
+                    }
 
-                this.speed.x    += xAceleration * (!this.collisions.left.collision)  * (!this.collisions.rigth.collision);
-                this.speed.y    += yAceleration * (!this.collisions.top.collision )  * (!this.collisions.bottom.collision);
+                    //choque de bola con muro
+                    if(this.collisions.rigth.type === entityTypes.wall && this.type == entityTypes.ball) { 
+                        this.position.x += this.collisions.rigth.deep;
+                        this.speed.x    = -this.speed.x ; 
+                    }
+
+                    //choque de bola con enemigo
+                    if(this.collisions.rigth.type === entityTypes.enemy && this.type == entityTypes.ball) { 
+                        this.position.x += this.collisions.rigth.deep;
+                        this.speed.x    = -this.speed.x ; 
+                    }
+
+                    //choque de enemigo con bola
+                    if(this.collisions.rigth.type === entityTypes.ball && this.type == entityTypes.enemy) { 
+                        game.removeObject(this)
+                    }
+
+                    //choque de bola con jugador
+                    if(this.collisions.rigth.type === entityTypes.player && this.type == entityTypes.ball) { 
+                        this.position.x += this.collisions.rigth.deep;
+                        this.speed.x    = -this.speed.x ; 
+                    }
+
+                    //choque de jugador con bola
+                    if(this.collisions.rigth.type === entityTypes.ball && this.type == entityTypes.player) { 
+                    }
+                }
+
+                if (this.collisions.bottom.collision) {
+
+                    //choque de jugador con muro
+                    if(this.collisions.bottom.type === entityTypes.wall && this.type == entityTypes.player) { 
+                        this.position.y += this.collisions.bottom.deep;
+                        this.speed.y    = 0;
+                    }
+
+                    //choque de bola con muro
+                    if(this.collisions.bottom.type === entityTypes.wall && this.type == entityTypes.ball) { 
+                        this.position.y += this.collisions.bottom.deep;
+                        this.speed.y    = -this.speed.y;
+                    }
+
+                     //choque de bola con enemigo
+                     if(this.collisions.bottom.type === entityTypes.enemy && this.type == entityTypes.ball) { 
+                        this.position.y += this.collisions.bottom.deep;
+                        this.speed.y    = -this.speed.y;
+                    }
+
+                    //choque de enemigo con bola
+                    if(this.collisions.bottom.type === entityTypes.ball && this.type == entityTypes.enemy) {
+                        game.removeObject(this)
+                    }
+
+
+                    //choque de bola con jugador
+                    if(this.collisions.bottom.type === entityTypes.player && this.type == entityTypes.ball) { 
+                        this.position.y += this.collisions.bottom.deep;
+                        this.speed.y    = -this.speed.y;
+                    }
+
+                    //choque de jugador con bola
+                    if(this.collisions.bottom.type === entityTypes.ball && this.type == entityTypes.player) { 
+                    }
+
+
+
+                    
+                }
+
+                if (this.collisions.left.collision) {
+
+                    //choque de jugador con muro
+                    if(this.collisions.left.type === entityTypes.wall && this.type == entityTypes.player) { 
+                        this.position.x += this.collisions.left.deep;
+                        this.speed.x    =  0;
+                    }
+
+                    //choque de bola con muro
+                    if(this.collisions.left.type === entityTypes.wall && this.type == entityTypes.ball) { 
+                        this.position.x += this.collisions.left.deep;
+                        this.speed.x    =  -this.speed.x;
+                    }
+
+                    //choque de bola con enemigo
+                    if(this.collisions.left.type === entityTypes.enemy && this.type == entityTypes.ball) { 
+                        this.position.x += this.collisions.left.deep;
+                        this.speed.x    =  -this.speed.x;
+                    }
+
+                    //choque de enemigo con bola
+                    if(this.collisions.left.type === entityTypes.ball && this.type == entityTypes.enemy) { 
+                        game.removeObject(this)
+                    }
+
+                    //choque de bola con jugador
+                    if(this.collisions.left.type === entityTypes.player && this.type == entityTypes.ball) {
+                        this.position.x += this.collisions.left.deep;
+                        this.speed.x    =  -this.speed.x ;
+                    }
+
+                    //choque de jugador con bola
+                    if(this.collisions.left.type === entityTypes.ball && this.type == entityTypes.player) { 
+                    }
+                }
+
+
+                
+    
             }
-
-            // if (this.collisions.top.collision || this.collisions.rigth.collision || this.collisions.bottom.collision || this.collisions.left.collision) {
-
-            //     console.log(this.speed.y);
-            // }
 
         }
 
@@ -310,17 +542,18 @@
         }
 
         this.getAceleration = () => {
-            let xAceleration,
-                yAceleration;
-            
+            let xAceleration = 0,
+                yAceleration = 0;
+
             this.forces.forEach( force => {
-                xAceleration += force.x;
-                yAceleration += force.y;
+                let forceAply = force.lambda(this.forces);
+                xAceleration += forceAply.x;
+                yAceleration += forceAply.y;
             })
 
             return {
-                xAceleration: (xAceleration/m),
-                yAceleration: (yAceleration/m)
+                xAceleration: (xAceleration/this.mass),
+                yAceleration: (yAceleration/this.mass)
             }
         }
 
