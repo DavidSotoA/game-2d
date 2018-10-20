@@ -66,12 +66,31 @@
                     y = (fatherBox.position.y + (fatherBox.height/2)) - height/2
 
                 let powerUp = new Box(x, y, height, width, "cyan", false,  entityTypes.powerUp, new Vector(0, 2), 'death.png');
-                powerUp.addPowerUp(this.poweUps.speed);
+                powerUp.addPowerUp(this.poweUps.death);
                 game.addObject(powerUp);
             },
 
             getPowerUp: (obj) => {
-                LINEAL_SPEED += 0.2;
+                game.gameOver();
+            }
+        },
+
+        bomb: {
+            type: 'hiden',
+            crashBox: (fatherBox, game) => {
+                let height = 30,
+                    width = 30;
+
+                let x = (fatherBox.position.x + (fatherBox.width/2)) - width/2,
+                    y = (fatherBox.position.y + (fatherBox.height/2)) - height/2
+
+                let powerUp = new Box(x, y, height, width, "cyan", false,  entityTypes.powerUp, new Vector(0, 5), 'death.png');
+                powerUp.addPowerUp(this.poweUps.bomb);
+                game.addObject(powerUp);
+            },
+
+            getPowerUp: (obj) => {
+                game.gameOver();
             }
         },
 
@@ -86,12 +105,58 @@
                     y = (fatherBox.position.y + (fatherBox.height/2)) - height/2
 
                 let powerUp = new Box(x, y, height, width, "cyan", false,  entityTypes.powerUp, new Vector(0, 4), 'speed.png');
-                powerUp.addPowerUp(this.poweUps.death);
+                powerUp.addPowerUp(this.poweUps.speed);
                 game.addObject(powerUp);
             },
 
             getPowerUp: (obj) => {
-                game.gameOver();
+                LINEAL_SPEED += 0.2;
+            }
+
+        },
+
+        jump: {
+            type: 'hiden',
+            crashBox: (fatherBox, game) => {
+                let height = 30,
+                    width = 30;
+
+                let x = (fatherBox.position.x + (fatherBox.width/2)) - width/2,
+                    y = (fatherBox.position.y + (fatherBox.height/2)) - height/2
+
+                let powerUp = new Box(x, y, height, width, "cyan", false,  entityTypes.powerUp, new Vector(0, 4), 'jump.png');
+                powerUp.addPowerUp(this.poweUps.jump);
+                game.addObject(powerUp);
+            },
+
+            getPowerUp: (obj) => {
+
+                obj.handleKeys = () => {
+                    if (keys) {
+
+                        if (keys[37]) {
+                            obj.speed.x = -LINEAL_SPEED;
+                        }
+        
+                        if (keys[39]) {
+                            obj.speed.x = LINEAL_SPEED;
+                        }
+        
+                        if (!keys[37] && !keys[39]) {
+                            obj.speed.x = 0;
+                        }
+        
+                        if(keys[38] && obj.collisions.bottom.collision) {
+                            obj.speed.y = -5;
+                        }
+        
+                        if(keys[40]) {
+                            obj.speed.y = 5;
+                        }
+        
+                    }
+                }
+                
             }
 
         }
@@ -101,6 +166,28 @@
     function main(){
         var gravity = new Vector(0, 0.2);
 
+        var handleKeys = (obj) => {
+            if (keys) {
+
+                if (keys[37]) {
+                    obj.speed.x = -LINEAL_SPEED;
+                }
+
+                if (keys[39]) {
+                    obj.speed.x = LINEAL_SPEED;
+                }
+
+                if (!keys[37] && !keys[39]) {
+                    obj.speed.x = 0;
+                }
+
+                if(keys[40]) {
+                    obj.speed.y = 5;
+                }
+
+            }
+        }
+
         var player  = new Box(410, 450, 80, 20, "#522f7f", false,   entityTypes.player, new Vector(0,0) , false),
             ball  =   new Box(300, 300, 24, 24, "blue", false,      entityTypes.ball, new Vector(5,4)   , false),
             left    = new Box(0, 0, 10, 500, "gray", true,          entityTypes.wall, new Vector(0,0)   , false),
@@ -108,6 +195,7 @@
             rigth   = new Box(890, 0, 10, 500, "gray", true,        entityTypes.wall, new Vector(0,0)   , false),
             top     = new Box(0, 0, 900, 10, "gray", true,          entityTypes.wall, new Vector(0,0    , false));
 
+            player.handleKeys = handleKeys;
             game.addObject(player)
                 .addObject(ball)
                 .addObject(bottom)
@@ -146,6 +234,10 @@
 
                     if (fortune > 30 && fortune <= 35 ) {
                         block.addPowerUp(poweUps.speed);
+                    }
+
+                    if (fortune > 35 && fortune <= 40 ) {
+                        block.addPowerUp(poweUps.jump);
                     }
                     
                     game.addObject(block)
@@ -207,29 +299,7 @@
                 ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 
                 //handle key events
-                if (keys) {
-
-                    if (keys[37]) {
-                        player.speed.x = -LINEAL_SPEED;
-                    }
-
-                    if (keys[39]) {
-                        player.speed.x = LINEAL_SPEED;
-                    }
-
-                    if (!keys[37] && !keys[39]) {
-                        player.speed.x = 0;
-                    }
-
-                    if(keys[38] && player.collisions.bottom.collision) {
-                        player.speed.y = -5;
-                    }
-
-                    if(keys[40]) {
-                        player.speed.y = 5;
-                    }
-
-                }
+                player.exectHandleKeys();
 
                 let collisionObjects = this.getCollisionObjects();
 
@@ -500,6 +570,7 @@
         this.powerUps    = [];
         this.band = 20;
         this.color = color;
+        this.handleKeys;
         if(image) {
             this.isImage = true;
             this.image = new Image();
@@ -672,6 +743,7 @@
                     if(this.collisions.rigth.type === entityTypes.player && this.type == entityTypes.ball) { 
                         this.position.x += this.collisions.rigth.deep;
                         this.speed.x    = -Math.abs(this.speed.x) ;
+                        this.speed.y    =  -Math.abs(this.speed.y) ;
                     }
 
                     //choque de jugador con bola
@@ -817,6 +889,7 @@
                     if(this.collisions.left.type === entityTypes.player && this.type == entityTypes.ball) {
                         this.position.x += this.collisions.left.deep;
                         this.speed.x    =  Math.abs(this.speed.x) ;
+                        this.speed.y    =  -Math.abs(this.speed.y) ;
                     }
 
                     //choque de jugador con bola
@@ -904,6 +977,10 @@
         this.getCenter = () => {
             let point = new Point(this.position.x + this.width/2, this.y + this.position.height/2);
             return point;
+        }
+
+        this.exectHandleKeys = () => {
+            this.handleKeys(this);
         }
 
     }
