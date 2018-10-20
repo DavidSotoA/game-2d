@@ -2,7 +2,7 @@
     var ctx;
     var id = 0;
     var keys = []
-    const LINEAL_SPEED = 9;
+    var LINEAL_SPEED = 9;
     var game = new Game();
 
     var Forces = {
@@ -29,20 +29,21 @@
         ball: 'ball',
         wall: 'wall',
         enemy: 'enemy',
-        powerUp: 'powerUp'
+        powerUp: 'powerUp',
+        kill: 'kill'
     }
 
     var poweUps = {
         increment: {
             type: 'hiden',
             crashBox: (fatherBox, game) => {
-                let height = 20,
-                    width = 20;
+                let height = 30,
+                    width = 30;
 
                 let x = (fatherBox.position.x + (fatherBox.width/2)) - width/2,
                     y = (fatherBox.position.y + (fatherBox.height/2)) - height/2
 
-                let powerUp = new Box(x, y, height, width, "cyan", false,  entityTypes.powerUp, new Vector(0, 4));
+                let powerUp = new Box(x, y, height, width, "cyan", false,  entityTypes.powerUp, new Vector(0, 3), 'food.png');
                 powerUp.addPowerUp(this.poweUps.increment);
                 game.addObject(powerUp);
             },
@@ -53,49 +54,100 @@
                 obj.position.x -= (extraWidth/2) 
                 obj.width += extraWidth;
             }
+        },
+
+        death: {
+            type: 'hiden',
+            crashBox: (fatherBox, game) => {
+                let height = 30,
+                    width = 30;
+
+                let x = (fatherBox.position.x + (fatherBox.width/2)) - width/2,
+                    y = (fatherBox.position.y + (fatherBox.height/2)) - height/2
+
+                let powerUp = new Box(x, y, height, width, "cyan", false,  entityTypes.powerUp, new Vector(0, 2), 'death.png');
+                powerUp.addPowerUp(this.poweUps.speed);
+                game.addObject(powerUp);
+            },
+
+            getPowerUp: (obj) => {
+                LINEAL_SPEED += 0.2;
+            }
+        },
+
+        speed: {
+
+            type: 'hiden',
+            crashBox: (fatherBox, game) => {
+                let height = 30,
+                    width = 30;
+
+                let x = (fatherBox.position.x + (fatherBox.width/2)) - width/2,
+                    y = (fatherBox.position.y + (fatherBox.height/2)) - height/2
+
+                let powerUp = new Box(x, y, height, width, "cyan", false,  entityTypes.powerUp, new Vector(0, 4), 'speed.png');
+                powerUp.addPowerUp(this.poweUps.death);
+                game.addObject(powerUp);
+            },
+
+            getPowerUp: (obj) => {
+                game.gameOver();
+            }
+
         }
     }
+
 
     function main(){
         var gravity = new Vector(0, 0.2);
 
-        var player  = new Box(410, 450, 80, 20, "blue", false,      entityTypes.player, new Vector(0,0)),
-            ball  =   new Box(300, 300, 30, 30, "blue", false,      entityTypes.ball, new Vector(4,4)),
-
-            left    = new Box(0, 0, 30, 500, "gray", true,          entityTypes.wall, new Vector(0,0)),
-            bottom  = new Box(0, 470, 900, 30, "gray", true,        entityTypes.wall, new Vector(0,0)),
-            rigth   = new Box(870, 0, 30, 500, "gray", true,        entityTypes.wall, new Vector(0,0)),
-            top     = new Box(0, 0, 900, 30, "gray", true,          entityTypes.wall, new Vector(0,0));
+        var player  = new Box(410, 450, 80, 20, "#522f7f", false,   entityTypes.player, new Vector(0,0) , false),
+            ball  =   new Box(300, 300, 24, 24, "blue", false,      entityTypes.ball, new Vector(5,4)   , false),
+            left    = new Box(0, 0, 10, 500, "gray", true,          entityTypes.wall, new Vector(0,0)   , false),
+            bottom  = new Box(0, 470, 900, 30, "black", true,       entityTypes.kill, new Vector(0,0)   , false),
+            rigth   = new Box(890, 0, 10, 500, "gray", true,        entityTypes.wall, new Vector(0,0)   , false),
+            top     = new Box(0, 0, 900, 10, "gray", true,          entityTypes.wall, new Vector(0,0    , false));
 
             game.addObject(player)
                 .addObject(ball)
-                .addObject(left)
                 .addObject(bottom)
+                .addObject(left)
                 .addObject(rigth)
                 .addObject(top)
 
             let blocks = []
-            let colors = ['red', 'blue', 'green']
-            let rows = 4,
-                columns = 8;
+            let colors = ['#bada55', '#6a0032', '#9494ff', '#82cfa4', '#b01dab']
+            let rows = 7,
+                columns = 10;
             
-            let obstaculos = 5;
-                // poweUps = 5;
+            let obstaculos = 10;
+                jumps = 10;
+                deaths = 10
             
             for (let j=0; j<rows; j++ ) {
-                let y = 80 +(41*j)
+                let y = 60 +(21*j)
                 for (let i=0; i<columns; i++ ) {
                     let fortune = Math.floor((Math.random() * rows*columns) + 1);
 
                     let type = fortune <= obstaculos ? entityTypes.wall : entityTypes.enemy;
-                        color = fortune <= obstaculos ? "gray" : colors[(i+j)%3];
+                        color = fortune <= obstaculos ? '#3d3d3d' : colors[(fortune) % colors.length];
 
-                     if(fortune <= obstaculos) {
-                         obstaculos -= 1;
-                     }
 
-                    let block = new Box(90 + (91*i), y, 90, 40, color, false, type, new Vector(0,0));
-                    block.addPowerUp(poweUps.increment);
+                    let block = new Box(90 + (71*i), y, 70, 20, color, false, type, new Vector(0,0), false);
+
+                    if (fortune > 10 && fortune <= 20 ) {
+                        block.addPowerUp(poweUps.increment);
+
+                    }
+
+                    if (fortune > 20 && fortune <= 30 ) {
+                        block.addPowerUp(poweUps.death);
+                    }
+
+                    if (fortune > 30 && fortune <= 35 ) {
+                        block.addPowerUp(poweUps.speed);
+                    }
+                    
                     game.addObject(block)
                 }
             }
@@ -108,6 +160,7 @@
         this.objects = [];
         this.physics = {};
         this.manualMotion = false;
+        this.loop;
 
         this.start = ( width, height, gravity, manualMotion) => {
             this.canvas.width   = width;
@@ -190,7 +243,11 @@
                 });
             }
 
-            this.manualMotion ? this.updateGame() : setInterval(this.updateGame, 20);
+            if (this.manualMotio) {
+                this.updateGame()
+            } else {
+               this.loop = setInterval(this.updateGame, 20);
+            }
         }
 
         this.addObject = function(object) {
@@ -212,6 +269,10 @@
 
         this.getObject = (id) => {
             return this.objects.filter(obj => obj.id == id)[0];
+        }
+
+        this.gameOver = () => {
+            clearInterval(this.loop);
         }
 
     }
@@ -266,25 +327,29 @@
                 collision : false,
                 id: null,
                 deep: 0,
-                type: ''
+                type: '',
+                area: 0
             },
             rigth:  {
                 collision : false,
                 id: null,
                 deep: 0,
-                type: ''
+                type: '',
+                area: 0
             },
             bottom: {
                 collision : false,
                 id: null,
                 deep: 0,
-                type: ''
+                type: '',
+                area: 0
             },
             left:   {
                 collision : false,
                 id: null,
                 deep: 0,
-                type: ''
+                type: '',
+                area: 0
             }
         }
 
@@ -313,21 +378,29 @@
                 collision.rigth.deep = -Math.abs(rigth1 - left2);
                 collision.rigth.type = b.type;
                 collision.rigth.id = b.id;
+
+                collision.rigth.area = getAreaCollisionBoxBox(a, b, 'rigth');
             } else if (current_left1 >= current_rigth2 && left1 <= rigth2) {
                 collision.left.collision = true;
                 collision.left.deep = Math.abs(left1 - rigth2);
                 collision.left.type = b.type;
                 collision.left.id = b.id;
+
+                collision.top.area = getAreaCollisionBoxBox(a, b, 'left');
             } else if (current_top1 >= current_bottom2 && top1 <= bottom2) {
                 collision.top.collision = true;
                 collision.top.deep = Math.abs(top1 - bottom2);
                 collision.top.type = b.type;
                 collision.top.id = b.id;
+
+                collision.top.area = getAreaCollisionBoxBox(a, b, 'top');
             } else if(current_bottom1 <= current_top2 && bottom1 >= top2) {
                 collision.bottom.collision = true;
                 collision.bottom.deep = -Math.abs(bottom1 - top2);
                 collision.bottom.type = b.type;
                 collision.bottom.id = b.id;
+
+                collision.top.bottom = getAreaCollisionBoxBox(a, b, 'bottom');
             }
         
         } 
@@ -337,31 +410,67 @@
 
     }
 
+    function getAreaCollisionBoxBox(myBox, otherBox, collisionSide) {
+        let sidesMyBox = myBox.getSides(),
+            sidesOtherBox = otherBox.getSides(),
+            center = myBox.getCenter(),
+            points,
+            a,
+            b;
+
+
+        if (['top', 'bottom'].indexOf(collisionSide) >= 0) {
+            points = [sidesMyBox.left, sidesMyBox.rigth, sidesOtherBox.left, sidesOtherBox.rigth];
+            points.sort((a,b) => a-b);
+            a = points[1] - center.x;
+            b = points[2] - center.x;
+        }
+
+        else if(['left', 'rigth'].indexOf(collisionSide) >= 0) {
+            points = [sidesMyBox.top, sidesMyBox.bottom, sidesOtherBox.top, sidesOtherBox.bottom];
+            points.sort((a,b) => a-b);
+            a = points[1] - center.y;
+            b = points[2] - center.y;
+        }
+
+
+
+        return {
+            a: a,
+            b: b
+        }
+
+    }
+
     function objectWorldCollition(object, world)  {
         var collitions = {
             top:    {
                 collision : false,
                 id: null,
                 deep: 0,
-                type: ''
+                type: '',
+                area: 0
             },
             rigth:  {
                 collision : false,
                 id: null,
                 deep: 0,
-                type: ''
+                type: '',
+                area: 0
             },
             bottom: {
                 collision : false,
                 id: null,
                 deep: 0,
-                type: ''
+                type: '',
+                area: 0
             },
             left:   {
                 collision : false,
                 id: null,
                 deep: 0,
-                type: ''
+                type: '',
+                area: 0
             }
         }
 
@@ -380,7 +489,7 @@
     }
 
 
-    function Box(x, y, width, height, color, fixed, type, initialSpeed) {
+    function Box(x, y, width, height, color, fixed, type, initialSpeed, image) {
         this.id         = id;
         id              += 1 ;
         this.position   = new Point(x,y);
@@ -389,6 +498,13 @@
         this.forces     = [];
         this.type       = type;
         this.powerUps    = [];
+        this.band = 20;
+        this.color = color;
+        if(image) {
+            this.isImage = true;
+            this.image = new Image();
+            this.image.src =  './images/' + image    ;
+        }
         this.collide    = {
             isCollision: false,
             type: '',
@@ -398,25 +514,29 @@
                 collision : false,
                 id: null,
                 deep: 0,
-                type: ''
+                type: '',
+                area: 0
             },
             rigth:  {
                 collision : false,
                 id: null,
                 deep: 0,
-                type: ''
+                type: '',
+                area: 0
             },
             bottom: {
                 collision : false,
                 id: null,
                 deep: 0,
-                type: ''
+                type: '',
+                area: 0
             },
             left:   {
                 collision : false,
                 id: null,
                 deep: 0,
-                type: ''
+                type: '',
+                area: 0
             }
         };
 
@@ -451,6 +571,17 @@
                     if(this.collisions.top.type === entityTypes.wall && this.type == entityTypes.player) { 
                         this.position.y += this.collisions.top.deep;
                         this.speed.y    = 0
+                    }
+
+                    //choque jugador con kill
+                    if(this.collisions.top.type === entityTypes.kill && this.type == entityTypes.player) { 
+                        this.position.y += this.collisions.top.deep;
+                        this.speed.y    = 0
+                    }
+
+                    // choque bola con kill
+                    if(this.collisions.top.type === entityTypes.kill && this.type == entityTypes.ball) { 
+                        game.gameOver();
                     }
 
                     //choque de bola con muro
@@ -505,6 +636,18 @@
                         this.speed.x    = 0; 
                     }
 
+                    //choque jugador con kill
+                    if(this.collisions.rigth.type === entityTypes.kill && this.type == entityTypes.player) { 
+                        this.position.x += this.collisions.rigth.deep;
+                        this.speed.x    = 0; 
+                    }
+
+                    // choque bola con kill
+                    if(this.collisions.rigth.type === entityTypes.kill && this.type == entityTypes.ball) { 
+                        game.gameOver();
+                    }
+
+
                     //choque de bola con muro
                     if(this.collisions.rigth.type === entityTypes.wall && this.type == entityTypes.ball) { 
                         this.position.x += this.collisions.rigth.deep;
@@ -528,7 +671,7 @@
                     //choque de bola con jugador
                     if(this.collisions.rigth.type === entityTypes.player && this.type == entityTypes.ball) { 
                         this.position.x += this.collisions.rigth.deep;
-                        this.speed.x    = -this.speed.x ; 
+                        this.speed.x    = -Math.abs(this.speed.x) ;
                     }
 
                     //choque de jugador con bola
@@ -556,6 +699,18 @@
                         this.speed.y    = 0;
                     }
 
+                    //choque jugador con kill
+                    if(this.collisions.bottom.type === entityTypes.kill && this.type == entityTypes.player) { 
+                        this.position.y += this.collisions.bottom.deep;
+                        this.speed.y    = 0;
+                    }
+
+                    // choque bola con kill
+                    if(this.collisions.bottom.type === entityTypes.kill && this.type == entityTypes.ball) { 
+                        game.gameOver();
+                    }
+
+
                     //choque de bola con muro
                     if(this.collisions.bottom.type === entityTypes.wall && this.type == entityTypes.ball) { 
                         this.position.y += this.collisions.bottom.deep;
@@ -579,8 +734,27 @@
 
                     //choque de bola con jugador
                     if(this.collisions.bottom.type === entityTypes.player && this.type == entityTypes.ball) { 
+
+                        let player = game.getObject(this.collisions.bottom.id);
+             
+                            center = player.getCenter();
+
+                        let collisionPlayerBall = player.collisions.top
+    
+                        let distance = Math.min.apply(Math, 
+                                 [Math.abs(collisionPlayerBall.area.a), 
+                                  Math.abs(collisionPlayerBall.area.b)]);
+                        
                         this.position.y += this.collisions.bottom.deep;
                         this.speed.y    = -this.speed.y;
+
+                        if (distance >= (player.width/2) - player.band) {
+                            if (collisionPlayerBall.area.a > 0 && collisionPlayerBall.area.b > 0){
+                                this.speed.x    = Math.abs(this.speed.x) ;
+                            } else {
+                                this.speed.x    = -Math.abs(this.speed.x) ;
+                            }
+                        }
                     }
 
                     //choque de jugador con bola
@@ -608,6 +782,17 @@
                         this.speed.x    =  0;
                     }
 
+                    //choque jugador con kill
+                    if(this.collisions.left.type === entityTypes.kill && this.type == entityTypes.player) { 
+                        this.position.x += this.collisions.left.deep;
+                        this.speed.x    =  0;
+                    }
+
+                     // choque bola con kill
+                     if(this.collisions.left.type === entityTypes.kill && this.type == entityTypes.ball) { 
+                        game.gameOver();
+                    }
+
                     //choque de bola con muro
                     if(this.collisions.left.type === entityTypes.wall && this.type == entityTypes.ball) { 
                         this.position.x += this.collisions.left.deep;
@@ -631,7 +816,7 @@
                     //choque de bola con jugador
                     if(this.collisions.left.type === entityTypes.player && this.type == entityTypes.ball) {
                         this.position.x += this.collisions.left.deep;
-                        this.speed.x    =  -this.speed.x ;
+                        this.speed.x    =  Math.abs(this.speed.x) ;
                     }
 
                     //choque de jugador con bola
@@ -681,13 +866,44 @@
             }
         }
 
+        this.getSides = () => {
+            let top = this.position.y,
+                rigth = this.position.x + this.width,
+                bottom = this.position.y + this.height,
+                left = this.position.x;
+
+            return {
+                top: top,
+                rigth: rigth,
+                bottom: bottom,
+                left
+            }
+        }
+
         this.make = () => {
-            ctx.fillStyle = color;
-            ctx.fillRect(this.position.x, this.position.y, this.width, this.height);
+            
+            if (this.type != entityTypes.player) {
+                if (!this.isImage){
+                    ctx.fillStyle = this.color;
+                    ctx.fillRect(this.position.x, this.position.y, this.width, this.height);
+                } else {
+                    ctx.drawImage(this.image,this.position.x, this.position.y, this.width, this.height);
+                }
+            } else {
+                ctx.fillStyle = '#46286c';
+                ctx.fillRect(this.position.x, this.position.y, this.band, this.height)
+
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.position.x + this.band, this.position.y, this.width - this.band, this.height)
+
+                ctx.fillStyle = '#46286c';
+                ctx.fillRect(this.position.x + this.width - this.band, this.position.y, this    .band, this.height)
+            }
         }
 
         this.getCenter = () => {
-            return new Point(this.x + this.width/2, this.y + this.height/2);
+            let point = new Point(this.position.x + this.width/2, this.y + this.position.height/2);
+            return point;
         }
 
     }
