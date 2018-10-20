@@ -4,6 +4,8 @@
     var keys = []
     var LINEAL_SPEED = 9;
     var game = new Game();
+    var gunHeigth = 20,
+        gunWidth  = 10
 
     var Forces = {
         gravity: {
@@ -30,7 +32,8 @@
         wall: 'wall',
         enemy: 'enemy',
         powerUp: 'powerUp',
-        kill: 'kill'
+        kill: 'kill',
+        bullet: 'bullet'
     }
 
     var poweUps = {
@@ -53,6 +56,7 @@
 
                 obj.position.x -= (extraWidth/2) 
                 obj.width += extraWidth;
+                game.getSound('eat').play()
             }
         },
 
@@ -71,6 +75,7 @@
             },
 
             getPowerUp: (obj) => {
+                game.getSound('death').play();
                 game.gameOver();
             }
         },
@@ -90,6 +95,7 @@
             },
 
             getPowerUp: (obj) => {
+                game.getSound('explosion').play()
                 game.gameOver();
             }
         },
@@ -110,6 +116,7 @@
             },
 
             getPowerUp: (obj) => {
+                game.getSound('speed').play();
                 LINEAL_SPEED += 0.2;
             }
 
@@ -130,6 +137,7 @@
             },
 
             getPowerUp: (obj) => {
+                game.getSound('jump').play();
 
                 obj.handleKeys = () => {
                     if (keys) {
@@ -153,6 +161,18 @@
                         if(keys[40]) {
                             obj.speed.y = 5;
                         }
+
+                        if(keys[32]) {
+                            if (game.objects.filter( obj => obj.type == entityTypes.bullet).length == 0){
+                                
+                                let player = game.objects[0];
+                                    center = player.getCenter();
+        
+                                let bullet = new Box(center.x, center.y - (player.height/2) - (gunHeigth), 7, 9, "white", false, entityTypes.bullet, new Vector(0,-10) , 'bullet.png')
+                                game.getSound('shot').play();
+                                game.addObject(bullet);
+                            };
+                        }
         
                     }
                 }
@@ -162,8 +182,38 @@
         }
     }
 
+    function Sound(src, name) {
+        this.name = name;
+        this.sound = document.createElement("audio");
+        this.sound.src = 'sounds/' + src;
+        this.sound.setAttribute("preload", "auto");
+        this.sound.setAttribute("controls", "none");
+        this.sound.style.display = "none";
+        
+        document.body.appendChild(this.sound);
+        this.play = function(){
+            this.sound.load();
+            this.sound.play();
+        }
+        this.stop = function(){
+            this.sound.pause();
+        }    
+    }
+
 
     function main(){
+        // let canvas = document.getElementById("canvas");
+        // if (canvas) {
+        //     canvas.parentNode.removeChild(canvas);
+        //     ctx = null;
+        //     id = 0;
+        //     keys = []
+        //     LINEAL_SPEED = 9;
+        //     game = new Game();
+
+        // }
+
+
         var gravity = new Vector(0, 0.2);
 
         var handleKeys = (obj) => {
@@ -185,15 +235,38 @@
                     obj.speed.y = 5;
                 }
 
+                if(keys[32]) {
+                    if (game.objects.filter( obj => obj.type == entityTypes.bullet).length == 0){
+
+                        let player = game.objects[0];
+                            center = player.getCenter();
+
+                        let bullet = new Box(center.x , center.y - (player.height/2) - (gunHeigth), 7, 9, "white", false, entityTypes.bullet, new Vector(0,-10) , 'bullet.png')
+                        game.getSound('shot').play();
+                        game.addObject(bullet);
+                    };
+                }
+
             }
         }
 
-        var player  = new Box(410, 450, 80, 20, "#522f7f", false,   entityTypes.player, new Vector(0,0) , false),
+        var player  = new Box(410, 470, 80, 20, "#522f7f", false,   entityTypes.player, new Vector(0,0) , false),
             ball  =   new Box(340, 300, 24, 24, "blue", false,      entityTypes.ball, new Vector(4,5)   , false),
-            left    = new Box(0, 0, 10, 500, "gray", true,          entityTypes.wall, new Vector(0,0)   , false),
-            bottom  = new Box(0, 470, 900, 30, "black", true,       entityTypes.kill, new Vector(0,0)   , false),
-            rigth   = new Box(890, 0, 10, 500, "gray", true,        entityTypes.wall, new Vector(0,0)   , false),
-            top     = new Box(0, 0, 900, 10, "gray", true,          entityTypes.wall, new Vector(0,0    , false));
+            left    = new Box(0, 0, 10, 500,    "gray", true,          entityTypes.wall, new Vector(0,0)   , false),
+            bottom  = new Box(0, 490, 900, 10,  "black", true,       entityTypes.kill, new Vector(0,0)   , false),
+            rigth   = new Box(890, 0, 10, 500,  "gray", true,        entityTypes.wall, new Vector(0,0)   , false),
+            top     = new Box(0, 0, 900, 10,    "gray", true,          entityTypes.wall, new Vector(0,0    , false));
+
+        var sound_detroyBlock   = new Sound('destroyBlock.mp3', 'destroyBlock'),
+            sound_shot          = new Sound('shot.mp3', 'shot'),
+            sound_game          = new Sound('game.mp3', 'game'),
+            sound_explosion     = new Sound('explosion.mp3', 'explosion'),
+            sound_speed         = new Sound('speed.mp3', 'speed'),
+            sound_death         = new Sound('death.mp3', 'death'),
+            sound_eat         = new Sound('eat.mp3', 'eat'),
+            sound_jump          = new Sound('jump.mp3', 'jump')
+
+            sound_game.loop = true;
 
             player.handleKeys = handleKeys;
             game.addObject(player)
@@ -202,6 +275,15 @@
                 .addObject(left)
                 .addObject(rigth)
                 .addObject(top)
+
+            game.addSound(sound_detroyBlock)
+                .addSound(sound_shot)
+                .addSound(sound_explosion)
+                .addSound(sound_speed)
+                .addSound(sound_death)
+                .addSound(sound_eat)
+                .addSound(sound_jump)
+                
 
             let blocks = []
             let colors = ['#bada55', '#6a0032', '#9494ff', '#82cfa4', '#b01dab']
@@ -248,13 +330,14 @@
                     game.addObject(block)
                 }
             }
-
+        
         game.start(900, 500, Forces.gravity, false);
     }
 
     function Game() {
         this.canvas = document.createElement("canvas");
         this.objects = [];
+        this.sounds = [];
         this.physics = {};
         this.manualMotion = false;
         this.loop;
@@ -263,6 +346,7 @@
             this.canvas.width   = width;
             this.canvas.height  = height;
             this.manualMotion = manualMotion;
+            this.canvas.id = 'canvas'
 
             this.physics = {
                 gravity : gravity 
@@ -275,6 +359,11 @@
             this.handleKeys();
             this.loop();
         };
+
+        this.addSound = (sound) => {
+            this.sounds.push(sound);
+            return this;
+        }
 
         this.applyGravity = (objects) => {
             objects.forEach( obj => obj.addForce(this.physics.gravity));
@@ -347,9 +436,18 @@
         }
 
         this.gameOver = () => {
+            let fontSize = 60;
+            ctx.font =  fontSize + 'pt Consolas';
+            ctx.fillStyle = "white"
+            ctx.fillText("GAME OVER", (this.canvas.width/2) - (fontSize*4), 300);
+            
             clearInterval(this.loop);
         }
 
+        this.getSound = (name) => {
+            return this.sounds.filter( sound => sound.name == name)[0];
+        }
+ 
     }
 
     function Point(x, y) {
@@ -674,6 +772,7 @@
 
                     //choque de enemigo con bola
                     if(this.collisions.top.type === entityTypes.ball && this.type == entityTypes.enemy) {
+                        game.getSound('destroyBlock').play();
                         this.powerUps.forEach( powerUp => {
                             powerUp.crashBox(this, game)
                         })
@@ -698,6 +797,22 @@
 
                     //choque powerUp con jugador
                     if(this.collisions.top.type === entityTypes.player && this.type == entityTypes.powerUp) { 
+                        game.removeObject(this);
+                    }
+
+                    //choque bala contra muro
+                    if(this.collisions.top.type === entityTypes.wall && this.type == entityTypes.bullet) { 
+                        game.removeObject(this);
+                    }
+
+                    //choque bala contra powerUp
+                    if(this.collisions.top.type === entityTypes.powerUp && this.type == entityTypes.bullet) { 
+                        game.removeObject(this);
+                    }
+
+
+                    //choque powerUp contra bala
+                    if(this.collisions.top.type === entityTypes.bullet && this.type == entityTypes.powerUps) { 
                         game.removeObject(this);
                     }
 
@@ -738,6 +853,7 @@
 
                     //choque de enemigo con bola
                     if(this.collisions.rigth.type === entityTypes.ball && this.type == entityTypes.enemy) { 
+                        game.getSound('destroyBlock').play();
                         this.powerUps.forEach( powerUp => {
                             powerUp.crashBox(this, game)
                         })
@@ -766,6 +882,13 @@
                     if(this.collisions.rigth.type === entityTypes.player && this.type == entityTypes.powerUp) { 
                         game.removeObject(this);
                     }
+
+                    //choque powerUp contra bala
+                    if(this.collisions.rigth.type === entityTypes.powerUp && this.type == entityTypes.bullet) { 
+                        game.removeObject(this);
+                    }
+
+
                 }
 
                 if (this.collisions.bottom.collision) {
@@ -802,6 +925,8 @@
 
                     //choque de enemigo con bola
                     if(this.collisions.bottom.type === entityTypes.ball && this.type == entityTypes.enemy) {
+                        game.getSound('destroyBlock').play();
+                        game.sounds[0].play();
                         this.powerUps.forEach( powerUp => {
                             powerUp.crashBox(this, game)
                         })
@@ -849,6 +974,11 @@
                     if(this.collisions.bottom.type === entityTypes.player && this.type == entityTypes.powerUp) { 
                         game.removeObject(this);
                     }
+
+                    //choque powerUp contra bala
+                    if(this.collisions.bottom.type === entityTypes.bullet && this.type == entityTypes.powerUp) { 
+                        game.removeObject(this);
+                    }
                 }
 
                 if (this.collisions.left.collision) {
@@ -884,6 +1014,7 @@
 
                     //choque de enemigo con bola
                     if(this.collisions.left.type === entityTypes.ball && this.type == entityTypes.enemy) { 
+                        game.getSound('destroyBlock').play();
                         this.powerUps.forEach( powerUp => {
                             powerUp.crashBox(this, game)
                         })
@@ -909,6 +1040,11 @@
 
                     //choque powerUp con jugador
                     if(this.collisions.left.type === entityTypes.player && this.type == entityTypes.powerUp) { 
+                        game.removeObject(this);
+                    }
+
+                    //choque powerUp contra bala
+                    if(this.collisions.left.type === entityTypes.powerUp && this.type == entityTypes.bullet) { 
                         game.removeObject(this);
                     }
                 }
@@ -968,6 +1104,9 @@
                     ctx.drawImage(this.image,this.position.x, this.position.y, this.width, this.height);
                 }
             } else {
+
+                let center = this.getCenter();
+
                 ctx.fillStyle = '#46286c';
                 ctx.fillRect(this.position.x, this.position.y, this.band, this.height)
 
@@ -975,12 +1114,18 @@
                 ctx.fillRect(this.position.x + this.band, this.position.y, this.width - this.band, this.height)
 
                 ctx.fillStyle = '#46286c';
-                ctx.fillRect(this.position.x + this.width - this.band, this.position.y, this    .band, this.height)
+                ctx.fillRect(this.position.x + this.width - this.band, this.position.y, this    .band, this.height);
+
+                
+                ctx.fillStyle = '#46286c';
+                ctx.fillRect(center.x - (gunWidth/2), center.y - (this.height/2) - gunHeigth , gunWidth, gunHeigth);
+
+
             }
         }
 
         this.getCenter = () => {
-            let point = new Point(this.position.x + this.width/2, this.y + this.position.height/2);
+            let point = new Point(this.position.x + this.width/2, this.position.y + this.height/2);
             return point;
         }
 
