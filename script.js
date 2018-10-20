@@ -84,7 +84,7 @@
                 let x = (fatherBox.position.x + (fatherBox.width/2)) - width/2,
                     y = (fatherBox.position.y + (fatherBox.height/2)) - height/2
 
-                let powerUp = new Box(x, y, height, width, "cyan", false,  entityTypes.powerUp, new Vector(0, 5), 'death.png');
+                let powerUp = new Box(x, y, height, width, "cyan", false,  entityTypes.powerUp, new Vector(0, 7), 'bomb.png');
                 powerUp.addPowerUp(this.poweUps.bomb);
                 game.addObject(powerUp);
             },
@@ -189,7 +189,7 @@
         }
 
         var player  = new Box(410, 450, 80, 20, "#522f7f", false,   entityTypes.player, new Vector(0,0) , false),
-            ball  =   new Box(300, 300, 24, 24, "blue", false,      entityTypes.ball, new Vector(5,4)   , false),
+            ball  =   new Box(340, 300, 24, 24, "blue", false,      entityTypes.ball, new Vector(4,5)   , false),
             left    = new Box(0, 0, 10, 500, "gray", true,          entityTypes.wall, new Vector(0,0)   , false),
             bottom  = new Box(0, 470, 900, 30, "black", true,       entityTypes.kill, new Vector(0,0)   , false),
             rigth   = new Box(890, 0, 10, 500, "gray", true,        entityTypes.wall, new Vector(0,0)   , false),
@@ -208,7 +208,7 @@
             let rows = 7,
                 columns = 10;
             
-            let obstaculos = 10;
+            let obstaculos = 5;
                 jumps = 10;
                 deaths = 10
             
@@ -223,12 +223,12 @@
 
                     let block = new Box(90 + (71*i), y, 70, 20, color, false, type, new Vector(0,0), false);
 
-                    if (fortune > 10 && fortune <= 20 ) {
+                    if (fortune > 5 && fortune <= 15 ) {
                         block.addPowerUp(poweUps.increment);
 
                     }
 
-                    if (fortune > 20 && fortune <= 30 ) {
+                    if (fortune > 15 && fortune <= 30 ) {
                         block.addPowerUp(poweUps.death);
                     }
 
@@ -239,6 +239,11 @@
                     if (fortune > 35 && fortune <= 40 ) {
                         block.addPowerUp(poweUps.jump);
                     }
+
+                    if (fortune > 40 && fortune <= 45 ) {
+                        block.addPowerUp(poweUps.bomb);
+                    }
+                    
                     
                     game.addObject(block)
                 }
