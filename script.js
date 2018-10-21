@@ -519,7 +519,7 @@
                 });
             }
 
-            if (this.manualMotio) {
+            if (this.manualMotion) {
                 this.updateGame()
             } else {
                this.loop = setInterval(this.updateGame, 20);
