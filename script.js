@@ -3,9 +3,12 @@
     var id = 0;
     var keys = []
     var LINEAL_SPEED = 9;
-    var game = new Game();
+    var game;
     var gunHeigth = 20,
         gunWidth  = 10
+
+    var sound_game        = new Sound('game.mp3', 'game')
+        sound_game.loop   = true;
 
     var Forces = {
         gravity: {
@@ -14,14 +17,6 @@
             lambda: (obj) => {
                 let force = new Vector(0, 0.2);
                 return force;
-            }
-        }
-    }
-
-    let Collisions = {
-
-        collisionResolution : {
-            stop: function() {
             }
         }
     }
@@ -200,20 +195,70 @@
         }    
     }
 
+    function Option(name, action) {
+        this.name = name;
+        this.action = action;
 
-    function main(){
-        // let canvas = document.getElementById("canvas");
-        // if (canvas) {
-        //     canvas.parentNode.removeChild(canvas);
-        //     ctx = null;
-        //     id = 0;
-        //     keys = []
-        //     LINEAL_SPEED = 9;
-        //     game = new Game();
-
-        // }
+        this.execAction = () => {
+            this.action();
+        } 
+    }
 
 
+    function Menu(top , title, options) {
+        this.canvas = document.getElementById('canvas');
+        this.ctx = this.canvas.getContext("2d");
+
+        this.title = title;
+        this.options = options;
+        this.actualOption = 0;
+
+        this.make = () => {
+            let fontSize = 40;
+            this.ctx.font =  fontSize + 'px Consolas';
+            this.ctx.fillStyle = "white"
+            this.ctx.fillText(this.title, (this.canvas.width/2) - this.ctx.measureText(this.title).width/2 , top);
+            
+            let y = top + 100;
+            this.ctx.fillText("*", (this.canvas.width/2) - this.ctx.measureText(this.title).width/2, y + 50*this.actualOption);
+            
+
+            this.options.forEach( option => {
+                this.ctx.fillText(option.name,  this.canvas.width/2 - 
+                                                this.ctx.measureText(this.title).width/2  +  
+                                                this.ctx.measureText("*").width + 10, 
+                                    y);
+                y += 50;
+            })
+        }
+
+        this.show = () => {
+            this.make();
+            window.addEventListener('keydown', this.handleKeys);
+        }
+
+        this.handleKeys = (e) => {
+            if (e.keyCode == 40 && this.actualOption < this.options.length - 1) {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.actualOption += 1;
+                this.make();
+            } else if (e.keyCode == 38 && this.actualOption > 0 ) {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.actualOption -= 1;
+                this.make();
+            } else if (e.keyCode == 13) {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                window.removeEventListener('keydown', this.handleKeys)
+                this.options[this.actualOption].execAction();
+            }
+
+        }
+
+
+    }
+
+    function makeGame() {
+        game = new Game();
         var gravity = new Vector(0, 0.2);
 
         var handleKeys = (obj) => {
@@ -251,24 +296,24 @@
         }
 
         var player  = new Box(410, 470, 80, 20, "#522f7f", false,   entityTypes.player, new Vector(0,0) , false),
-            ball  =   new Box(340, 300, 24, 24, "blue", false,      entityTypes.ball, new Vector(4,5)   , false),
+            ball    = new Box(340, 300, 24, 24, "blue", false,      entityTypes.ball, new Vector(4,5)   , false),
             left    = new Box(0, 0, 10, 500,    "gray", true,          entityTypes.wall, new Vector(0,0)   , false),
             bottom  = new Box(0, 490, 900, 10,  "black", true,       entityTypes.kill, new Vector(0,0)   , false),
             rigth   = new Box(890, 0, 10, 500,  "gray", true,        entityTypes.wall, new Vector(0,0)   , false),
             top     = new Box(0, 0, 900, 10,    "gray", true,          entityTypes.wall, new Vector(0,0    , false));
+        
+            player.handleKeys = handleKeys;
 
         var sound_detroyBlock   = new Sound('destroyBlock.mp3', 'destroyBlock'),
             sound_shot          = new Sound('shot.mp3', 'shot'),
-            sound_game          = new Sound('game.mp3', 'game'),
             sound_explosion     = new Sound('explosion.mp3', 'explosion'),
             sound_speed         = new Sound('speed.mp3', 'speed'),
             sound_death         = new Sound('death.mp3', 'death'),
-            sound_eat         = new Sound('eat.mp3', 'eat'),
+            sound_eat           = new Sound('eat.mp3', 'eat'),
             sound_jump          = new Sound('jump.mp3', 'jump')
 
-            sound_game.loop = true;
 
-            player.handleKeys = handleKeys;
+            
             game.addObject(player)
                 .addObject(ball)
                 .addObject(bottom)
@@ -307,7 +352,6 @@
 
                     if (fortune > 5 && fortune <= 15 ) {
                         block.addPowerUp(poweUps.increment);
-
                     }
 
                     if (fortune > 15 && fortune <= 30 ) {
@@ -325,22 +369,78 @@
                     if (fortune > 40 && fortune <= 45 ) {
                         block.addPowerUp(poweUps.bomb);
                     }
-                    
-                    
                     game.addObject(block)
                 }
             }
-        
-        game.start(900, 500, Forces.gravity, false);
+    }
+
+
+    function main(){
+        game = new Game();
+
+        makeGame();
+
+
+        let startOption     = new Option("Start",  () => {  
+                                                            sound_game.play();
+                                                            game.start(900, 500, Forces.gravity, false)} ), 
+
+            manualOption    = new Option("Controls", () => {
+
+                var handleKeys = () => {
+                    if (e.keyCode == 13) {
+
+                    }
+                }
+
+                let canvas = document.getElementById('canvas');
+                let ctx = this.canvas.getContext("2d");
+      
+                ctx.fillStyle = "white"
+                ctx.font =  40 + 'px Consolas';
+                ctx.fillText("Controls",  (canvas.width/2) - ctx.measureText("Controls").width/2, 100 );
+
+                ctx.font =  20 + 'px Consolas';
+                ctx.fillText("Left arrow -> left move",  100 , 150);
+                ctx.fillText("Right arrow -> right move", 100 , 180);
+                ctx.fillText("Up arrow -> jump (only with frog)", 100 , 210);
+                ctx.fillText("Space -> shot", 100 , 240);
+
+                ctx.fillText("*",  800 -  ctx.measureText("Ok").width - ctx.measureText("*").width - 3, 403 );
+                ctx.fillText("Ok", 800 -  ctx.measureText("Ok").width, 400);
+
+            } ) ;
+
+        let menu = new Menu(100, "Ultra mega super game", [startOption, manualOption]);
+        menu.show()
+
+    }
+
+    function restart() {
+        ctx = null;
+        id = 0;
+        keys = []
+        LINEAL_SPEED = 9;
+        game = new Game();
+
+        makeGame();
+        sound_game.play()    
+        game.start(900, 500, Forces.gravity, false)
     }
 
     function Game() {
-        this.canvas = document.createElement("canvas");
+        this.canvas = document.getElementById("canvas");
         this.objects = [];
         this.sounds = [];
         this.physics = {};
         this.manualMotion = false;
         this.loop;
+
+
+        let optionRestart  = new Option("Restart", () => restart());
+        this.menuGameOver   = new Menu(250, "GAME OVER", [optionRestart]);
+
+        this.menuWinner   = new Menu(250, "YOU WIN!!", [optionRestart]);
 
         this.start = ( width, height, gravity, manualMotion) => {
             this.canvas.width   = width;
@@ -353,7 +453,6 @@
             }
 
             ctx = this.canvas.getContext("2d");
-            document.body.insertBefore(this.canvas, document.body.childNodes[0]);
 
             this.applyGravity([this.objects[0]]);
             this.handleKeys();
@@ -387,11 +486,15 @@
 
             this.updateGame = () => {
 
+                ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                if (this.objects.filter(obj => obj.type == entityTypes.enemy).length == 0) {
+                    this.winner();
+                }
+
+            
                 let player = this.objects[0];
 
-                //clean canvas
-                ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                
                 //handle key events
                 player.exectHandleKeys();
 
@@ -436,12 +539,16 @@
         }
 
         this.gameOver = () => {
-            let fontSize = 60;
-            ctx.font =  fontSize + 'pt Consolas';
-            ctx.fillStyle = "white"
-            ctx.fillText("GAME OVER", (this.canvas.width/2) - (fontSize*4), 300);
-            
+            sound_game.stop();
             clearInterval(this.loop);
+            this.menuGameOver.show();
+        }
+
+        this.winner = () => {
+            console.log('win')
+            clearInterval(this.loop);
+            this.menuWinner.show();
+
         }
 
         this.getSound = (name) => {
@@ -458,16 +565,6 @@
     function Vector(x, y) {
         this.x = x;
         this.y = y;
-    }
-
-    function copy(src) {
-        let target = {};
-        for (let prop in src) {
-        if (src.hasOwnProperty(prop)) {
-            target[prop] = src[prop];
-        }
-        }
-        return target;
     }
 
     function collition(obj1, obj2) {
@@ -525,19 +622,6 @@
                 area: 0
             }
         }
-
-        // console.log('--------------------------------------------------');
-        // console.log('Player:')
-        // console.log('position:' +       JSON.stringify(new Vector(a.position.x , a.position.y + a.height)))
-        // console.log('speed:' +          JSON.stringify(a.speed));
-        // console.log('aceleration:' +    JSON.stringify(a.getAceleration()));
-        // console.log('\n')
-        // console.log('obstaculo:')
-        // console.log('position:' +       JSON.stringify(b.position));
-        // console.log('speed:' +          JSON.stringify(b.speed));
-        // console.log('aceleration:' +    JSON.stringify(b.getAceleration()));
-
-        // console.log('--------------------------------------------------');
 
         let collide = !((bottom1 < top2) || (top1 > bottom2) || (rigth1 < left2) || (left1 > rigth2));
 
@@ -812,7 +896,7 @@
 
 
                     //choque powerUp contra bala
-                    if(this.collisions.top.type === entityTypes.bullet && this.type == entityTypes.powerUps) { 
+                    if(this.collisions.top.type === entityTypes.bullet && this.type == entityTypes.powerUp) { 
                         game.removeObject(this);
                     }
 
@@ -884,7 +968,7 @@
                     }
 
                     //choque powerUp contra bala
-                    if(this.collisions.rigth.type === entityTypes.powerUp && this.type == entityTypes.bullet) { 
+                    if(this.collisions.rigth.type === entityTypes.bullet && this.type == entityTypes.powerUp) { 
                         game.removeObject(this);
                     }
 
@@ -1044,7 +1128,7 @@
                     }
 
                     //choque powerUp contra bala
-                    if(this.collisions.left.type === entityTypes.powerUp && this.type == entityTypes.bullet) { 
+                    if(this.collisions.left.type === entityTypes.bullet && this.type == entityTypes.powerUp) { 
                         game.removeObject(this);
                     }
                 }
