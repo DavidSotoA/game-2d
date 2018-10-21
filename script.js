@@ -377,9 +377,8 @@
 
     function main(){
         game = new Game();
-
+    
         makeGame();
-
 
         let startOption     = new Option("Start",  () => {  
                                                             sound_game.play();
@@ -387,14 +386,17 @@
 
             manualOption    = new Option("Controls", () => {
 
-                var handleKeys = () => {
-                    if (e.keyCode == 13) {
-
-                    }
-                }
-
                 let canvas = document.getElementById('canvas');
                 let ctx = this.canvas.getContext("2d");
+
+
+                var handleKeys = (e) => {
+                    if (e.keyCode == 13) {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        window.removeEventListener('keydown', handleKeys)
+                        main()
+                    }
+                }
       
                 ctx.fillStyle = "white"
                 ctx.font =  40 + 'px Consolas';
@@ -409,6 +411,8 @@
                 ctx.fillText("*",  800 -  ctx.measureText("Ok").width - ctx.measureText("*").width - 3, 403 );
                 ctx.fillText("Ok", 800 -  ctx.measureText("Ok").width, 400);
 
+                window.addEventListener('keydown' , handleKeys);
+
             } ) ;
 
         let menu = new Menu(100, "Ultra mega super game", [startOption, manualOption]);
@@ -416,13 +420,16 @@
 
     }
 
-    function restart() {
+    function initGlobals() {
         ctx = null;
         id = 0;
         keys = []
         LINEAL_SPEED = 9;
         game = new Game();
+    }
 
+    function restart() {
+        initGlobals();
         makeGame();
         sound_game.play()    
         game.start(900, 500, Forces.gravity, false)
@@ -437,7 +444,9 @@
         this.loop;
 
 
-        let optionRestart  = new Option("Restart", () => restart());
+        let optionRestart   = new Option("Restart", () => restart());
+            optionExit      = new Option("Exit", () => {initGlobals(); main()});
+
         this.menuGameOver   = new Menu(250, "GAME OVER", [optionRestart]);
 
         this.menuWinner   = new Menu(250, "YOU WIN!!", [optionRestart]);
@@ -545,7 +554,6 @@
         }
 
         this.winner = () => {
-            console.log('win')
             clearInterval(this.loop);
             this.menuWinner.show();
 
@@ -804,11 +812,6 @@
 
         this.update = () => {
 
-                if (this.collisions.top.collision || this.collisions.rigth.collision || this.collisions.bottom.collision || this.collisions.left.collision) {
-                    // console.log(this.type)
-                    // console.log(this.collisions);
-                    
-                }
             if (!this.fixed)  {
 
     
